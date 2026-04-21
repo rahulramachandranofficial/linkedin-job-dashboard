@@ -221,8 +221,10 @@ function renderCard(job) {
     </div>
     <div class="card-actions">
       <button class="btn-cover">✉ Cover letter</button>
-      <a class="btn-apply" href="${job.applyUrl}" target="_blank" rel="noopener">Apply ↗</a>
-      <a class="btn-apply" href="${job.link}"     target="_blank" rel="noopener">LinkedIn ↗</a>
+      <div class="card-actions-row">
+        <a class="btn-apply" href="${job.applyUrl}" target="_blank" rel="noopener">Apply ↗</a>
+        <a class="btn-apply" href="${job.link}"     target="_blank" rel="noopener">LinkedIn ↗</a>
+      </div>
     </div>`;
 
   const toggleBtn  = card.querySelector('.btn-toggle-analysis');

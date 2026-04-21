@@ -108,16 +108,16 @@
       </div>
     </div>
 
-    <form id="search-form" autocomplete="off">
+    <form id="search-form" autocomplete="on">
       <div class="form-section">Search criteria</div>
       <label>Job role / title
-        <input type="text" id="f-role" placeholder="e.g. Business Analyst" required>
+        <input type="text" id="f-role" name="job-role" autocomplete="on" placeholder="e.g. Business Analyst" required>
       </label>
       <label>Location
-        <input type="text" id="f-location" placeholder="e.g. Europe, United Kingdom">
+        <input type="text" id="f-location" name="job-location" autocomplete="on" placeholder="e.g. Europe, United Kingdom">
       </label>
       <label>Extra keywords
-        <input type="text" id="f-keywords" placeholder="e.g. SQL regulatory banking">
+        <input type="text" id="f-keywords" name="job-keywords" autocomplete="on" placeholder="e.g. SQL regulatory banking">
       </label>
       <label>Job type
         <select id="f-type">

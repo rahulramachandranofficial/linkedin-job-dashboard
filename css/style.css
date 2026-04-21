@@ -418,6 +418,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   border-top: 1px solid var(--border-subtle);
   background: var(--bg-subtle);
 }
+/* On desktop the inner row is just a transparent flex passthrough */
+.card-actions-row { display: contents; }
 
 /* ─── Buttons ───────────────────────────────────────────────────── */
 .btn-primary {
@@ -589,19 +591,20 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   /* Main content fills the rest of the viewport */
   .main-content { flex: 1; overflow-y: auto; }
 
-  /* Single-column results */
-  .results-grid { grid-template-columns: 1fr; padding: 12px 12px; gap: 12px; }
+  /* Single-column results — snug horizontal padding */
+  .results-grid {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 10px;
+  }
 
   /* Compact topbar */
-  .topbar { padding: 9px 12px; gap: 6px; }
+  .topbar { padding: 8px 12px; gap: 6px; }
   .legend { display: none; }
-  .result-summary { font-size: 12px; }
+  .result-summary { font-size: 11.5px; }
 
   /* ── Modals as bottom-sheets on mobile ── */
-  .overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
+  .overlay { align-items: flex-end; padding: 0; }
   .modal, .modal-wide {
     width: 100%;
     max-height: 92dvh;
@@ -611,30 +614,61 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   }
 
   /* Shorter cover letter textarea on mobile */
-  #letter-body { min-height: 180px; }
+  #letter-body { min-height: 160px; }
 
   /* Letter controls stack into a 2-col grid on mobile */
-  .letter-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    align-items: end;
-  }
+  .letter-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; }
   .letter-controls label { grid-column: 1 / -1; }
 
   /* Touch-friendly button heights */
   .btn-primary, .btn-secondary { min-height: 44px; }
   .btn-icon-label { min-height: 42px; }
 
-  /* Card actions: each button fills half the row */
-  .card-actions { gap: 8px; }
-  .card-actions .btn-cover,
-  .card-actions .btn-apply { flex: 1; min-height: 40px; font-size: 12px; }
+  /* ── Mobile card layout ── */
+  .job-card { border-radius: 10px; }
+  .card-body { padding: 11px 12px; gap: 5px; }
 
-  /* Slightly larger card text for readability */
-  .card-title { font-size: 14px; }
-  .card-meta  { font-size: 12px; }
-  .tag        { font-size: 11px; }
+  /* Slightly smaller score badge to give title more room */
+  .score-badge { font-size: 15px; min-width: 40px; }
+  .card-title  { font-size: 13px; }
+  .card-meta   { font-size: 12px; }
+  .card-meta-sub { font-size: 10.5px; }
+  .tag         { font-size: 10.5px; }
+
+  /* Card actions: Cover letter full-width on top row,
+     Apply + LinkedIn side-by-side on second row */
+  .card-actions {
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+  .card-actions .btn-cover {
+    width: 100%;
+    min-height: 40px;
+    font-size: 12.5px;
+  }
+  .card-actions-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+  .card-actions .btn-apply {
+    flex: 1;
+    min-height: 38px;
+    font-size: 12px;
+  }
+
+  /* ── Pagination on mobile ── */
+  .pagination {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+  .pagination .btn-secondary {
+    flex: 1;
+    font-size: 13px;
+    min-height: 44px;
+  }
+  #page-info { font-size: 12px; min-width: 80px; }
 }
 
 /* Bottom-sheet slide animation */
