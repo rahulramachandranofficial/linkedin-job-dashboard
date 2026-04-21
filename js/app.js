@@ -1,7 +1,8 @@
 /* Motion One helper — animate with Framer Motion web animations */
-const mot = window.Motion || {};
-const animate = mot.animate || (() => {});
-const stagger  = mot.stagger  || (delay => (_, i) => i * delay);
+const mot      = window.Motion || {};
+const _motAnim = typeof mot.animate === 'function' ? mot.animate : null;
+const animate  = _motAnim;
+const stagger  = typeof mot.stagger === 'function' ? mot.stagger : (delay => (_, i) => i * delay);
 
 const LS = {
   get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
@@ -54,23 +55,41 @@ const els = {
 };
 
 /* ── Motion helpers ── */
+function showCards(cards) {
+  cards.forEach(c => { c.style.opacity = '1'; c.style.transform = ''; });
+}
+
 function animateIn(el, opts = {}) {
-  if (!el || !animate) return;
+  if (!el) return;
+  if (!animate) { el.style.opacity = '1'; return; }
   animate(el, { opacity: [0, 1], y: [12, 0] }, { duration: 0.25, easing: [0.4, 0, 0.2, 1], ...opts });
 }
 
 function animateModal(el) {
-  if (!el || !animate) return;
+  if (!el) return;
+  if (!animate) { el.style.opacity = '1'; return; }
   animate(el, { opacity: [0, 1], scale: [0.94, 1], y: [16, 0] }, { duration: 0.28, easing: [0.34, 1.56, 0.64, 1] });
 }
 
 function animateCards(cards) {
-  if (!cards.length || !animate) return;
-  animate(cards, { opacity: [0, 1], y: [20, 0], scale: [0.97, 1] }, {
-    duration: 0.3,
-    delay: stagger(0.04),
-    easing: [0.34, 1.56, 0.64, 1],
-  });
+  if (!cards.length) return;
+  /* Safety net: if Motion One fails for any reason, reveal cards after 700ms */
+  const fallback = setTimeout(() => showCards(cards), 700);
+  if (!animate) { clearTimeout(fallback); showCards(cards); return; }
+  try {
+    const anim = animate(cards, { opacity: [0, 1], y: [20, 0], scale: [0.97, 1] }, {
+      duration: 0.3,
+      delay: stagger(0.04),
+      easing: [0.34, 1.56, 0.64, 1],
+    });
+    /* Clear safety net once animation finishes successfully */
+    if (anim && typeof anim.finished === 'object' && anim.finished instanceof Promise) {
+      anim.finished.then(() => clearTimeout(fallback)).catch(() => { clearTimeout(fallback); showCards(cards); });
+    }
+  } catch {
+    clearTimeout(fallback);
+    showCards(cards);
+  }
 }
 
 /* ── SETTINGS ── */
@@ -253,7 +272,9 @@ async function runSearch(cfg) {
 els.searchForm.onsubmit = e => { e.preventDefault(); runSearch(getConfig()); };
 els.btnRefresh.onclick  = () => { if (lastCfg) runSearch(lastCfg); };
 $('btn-retry').onclick  = () => { if (lastCfg) runSearch(lastCfg); };
-els.btnExportPdf.onclick = () => { if (lastJobs.length) window.PDF.exportReport(lastJobs, lastCfg); };
+els.btnExportPdf.onclick = () => {
+  if (lastJobs.length) window.PDF.exportReport(lastJobs, lastCfg).catch(e => alert(`Export error: ${e.message}`));
+};
 
 /* ── COVER LETTER ── */
 function openCoverLetter(job) {
