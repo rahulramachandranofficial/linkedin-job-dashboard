@@ -34,9 +34,17 @@ function hexToRgb(hex) {
   return [r, g, b];
 }
 
+function pdfError(msg) {
+  alert(`PDF export failed: ${msg}\n\nThis usually means a CDN script couldn't be loaded. Check your internet connection and try again.`);
+}
+
 window.PDF = {
   async exportReport(jobs, cfg) {
-    await loadJsPDF();
+    try {
+      await loadJsPDF();
+    } catch (e) { pdfError(e.message); return; }
+    if (!window.jspdf || !window.jspdf.jsPDF) { pdfError('jsPDF library did not load correctly.'); return; }
+    try {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const PW = 210, ML = 14, MR = 14, CW = PW - ML - MR;
@@ -156,29 +164,35 @@ window.PDF = {
       y += 5;
     });
 
-    doc.setFontSize(8).setTextColor(150,150,150);
-    doc.text('Powered by Apify + Claude AI (Anthropic) · linkedin-job-dashboard', PW/2, 292, { align: 'center' });
+      doc.setFontSize(8).setTextColor(150,150,150);
+      doc.text('Powered by Apify + Claude AI (Anthropic) · linkedin-job-dashboard', PW/2, 292, { align: 'center' });
 
-    doc.save(`job-report-${Date.now()}.pdf`);
+      doc.save(`job-report-${Date.now()}.pdf`);
+    } catch (e) { pdfError(e.message); }
   },
 
   async exportLetter(text, jobTitle, company) {
-    await loadHtml2pdf();
-    const html = `<div style="font-family:Georgia,serif;max-width:680px;margin:0 auto;padding:40px 30px">
-      <p style="font-size:11px;color:#888;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:24px">
-        Cover Letter · ${jobTitle} @ ${company} · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}
-      </p>
-      <div style="font-size:13px;line-height:1.9;white-space:pre-wrap;color:#1a1a1a">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-    </div>`;
-    const el = document.createElement('div');
-    el.innerHTML = html;
-    document.body.appendChild(el);
-    await window.html2pdf().set({
-      margin: 0,
-      filename: `cover-letter-${company.replace(/\s+/g,'-').toLowerCase()}.pdf`,
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).from(el).save();
-    document.body.removeChild(el);
+    try {
+      await loadHtml2pdf();
+    } catch (e) { pdfError(e.message); return; }
+    if (typeof window.html2pdf !== 'function') { pdfError('html2pdf library did not load correctly.'); return; }
+    try {
+      const html = `<div style="font-family:Georgia,serif;max-width:680px;margin:0 auto;padding:40px 30px">
+        <p style="font-size:11px;color:#888;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:24px">
+          Cover Letter · ${jobTitle} @ ${company} · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}
+        </p>
+        <div style="font-size:13px;line-height:1.9;white-space:pre-wrap;color:#1a1a1a">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      </div>`;
+      const el = document.createElement('div');
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      await window.html2pdf().set({
+        margin: 0,
+        filename: `cover-letter-${company.replace(/\s+/g,'-').toLowerCase()}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      }).from(el).save();
+      document.body.removeChild(el);
+    } catch (e) { pdfError(e.message); }
   },
 };
