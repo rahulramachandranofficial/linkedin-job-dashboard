@@ -453,19 +453,151 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   border-radius: var(--radius-sm);
 }
 
+/* ─── Mobile header (hidden on desktop) ────────────────────────── */
+.mobile-header { display: none; }
+
+/* ─── Hamburger button ──────────────────────────────────────────── */
+.btn-hamburger {
+  background: none; border: none; cursor: pointer;
+  padding: 8px; display: flex; flex-direction: column;
+  gap: 5px; border-radius: var(--radius-sm);
+  transition: background var(--transition);
+}
+.btn-hamburger:hover { background: var(--bg); }
+.btn-hamburger span {
+  display: block; width: 22px; height: 2px;
+  background: var(--text); border-radius: 2px;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+.btn-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.btn-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.btn-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ─── Sidebar dim overlay (mobile only) ────────────────────────── */
+.sidebar-dim { display: none; }
+
+/* ─── Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+
+  /* App shell becomes a full-viewport column */
+  .app-shell {
+    flex-direction: column;
+    height: 100dvh;
+    height: 100vh; /* fallback */
+    overflow: hidden;
+  }
+
+  /* Sticky mobile top-bar */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 56px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-sm);
+    z-index: 20;
+  }
+
+  /* Sidebar becomes a slide-in drawer */
+  .sidebar {
+    position: fixed;
+    top: 56px; left: 0; bottom: 0;
+    width: min(310px, 88vw);
+    border-right: 1px solid var(--border-subtle);
+    z-index: 18;
+    transform: translateX(-100%);
+    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.26s ease;
+    overflow-y: auto;
+    background: var(--surface);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Hide the brand block inside sidebar (mobile header already shows it) */
+  .sidebar .brand { display: none; }
+
+  /* Semi-transparent dim behind open drawer */
+  .sidebar-dim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    top: 56px;
+    background: rgba(0, 0, 0, 0);
+    z-index: 17;
+    pointer-events: none;
+    transition: background 0.26s ease;
+  }
+  .sidebar-dim.active {
+    background: rgba(0, 0, 0, 0.38);
+    pointer-events: auto;
+  }
+
+  /* Main content fills the rest of the viewport */
+  .main-content { flex: 1; overflow-y: auto; }
+
+  /* Single-column results */
+  .results-grid { grid-template-columns: 1fr; padding: 12px 12px; gap: 12px; }
+
+  /* Compact topbar */
+  .topbar { padding: 9px 12px; gap: 6px; }
+  .legend { display: none; }
+  .result-summary { font-size: 12px; }
+
+  /* ── Modals as bottom-sheets on mobile ── */
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal, .modal-wide {
+    width: 100%;
+    max-height: 92dvh;
+    max-height: 92vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+    animation: slideUpSheet 0.28s cubic-bezier(0.34, 1.26, 0.64, 1);
+  }
+
+  /* Shorter cover letter textarea on mobile */
+  #letter-body { min-height: 180px; }
+
+  /* Letter controls stack into a 2-col grid on mobile */
+  .letter-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+  }
+  .letter-controls label { grid-column: 1 / -1; }
+
+  /* Touch-friendly button heights */
+  .btn-primary, .btn-secondary { min-height: 44px; }
+  .btn-icon-label { min-height: 42px; }
+
+  /* Card actions: each button fills half the row */
+  .card-actions { gap: 8px; }
+  .card-actions .btn-cover,
+  .card-actions .btn-apply { flex: 1; min-height: 40px; font-size: 12px; }
+
+  /* Slightly larger card text for readability */
+  .card-title { font-size: 14px; }
+  .card-meta  { font-size: 12px; }
+  .tag        { font-size: 11px; }
+}
+
+/* Bottom-sheet slide animation */
+@keyframes slideUpSheet {
+  from { transform: translateY(32px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 /* ─── Print ─────────────────────────────────────────────────────── */
 @media print {
   .sidebar, .topbar, .card-actions, .btn-primary, .btn-secondary, .overlay { display: none !important; }
   .main-content { overflow: visible; }
   .job-card { break-inside: avoid; box-shadow: none !important; transform: none !important; }
-}
-
-/* ─── Mobile ────────────────────────────────────────────────────── */
-@media (max-width: 700px) {
-  .app-shell { flex-direction: column; height: auto; }
-  .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-subtle); }
-  .main-content { overflow: visible; }
-  .results-grid { grid-template-columns: 1fr; padding: 12px 14px; }
-  .topbar { padding: 10px 14px; }
-  .legend { display: none; }
 }
