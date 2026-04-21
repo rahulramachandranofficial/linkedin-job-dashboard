@@ -1,11 +1,11 @@
 /*
- * Default API keys — pre-loaded into localStorage on first visit.
- * Keys entered manually in Settings always take precedence.
- *
- * WARNING: This file is committed to a PUBLIC repository.
- * Rotate these keys immediately if they are compromised.
+ * Public template — committed to the repo with EMPTY keys.
+ * To set real keys locally without committing them:
+ *   1. Create js/config.local.js (it is gitignored)
+ *   2. Copy this object into it and fill in your keys
+ * Alternatively, enter keys once in the Settings modal — they persist in localStorage.
  */
 window.APP_CONFIG = {
-  apifyKey:     '',   // your Apify API key
-  anthropicKey: '',   // your Anthropic API key
+  apifyKey:     '',
+  anthropicKey: '',
 };
