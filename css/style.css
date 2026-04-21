@@ -1,3 +1,10 @@
+/* ─── Accessibility utility ─────────────────────────────────────── */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
 /* ─── Design Tokens ─────────────────────────────────────────────── */
 :root {
   --teal:        #1D9E75;
@@ -318,26 +325,26 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .card-accent.coral { background: linear-gradient(90deg, var(--coral), #f07040); }
 .card-accent.gray  { background: linear-gradient(90deg, var(--gray), #a8a79e); }
 
-.card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 9px; }
+.card-body { padding: 13px 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
 
 .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .card-title {
-  font-size: 13.5px; font-weight: 700; line-height: 1.4; flex: 1;
+  font-size: 13.5px; font-weight: 700; line-height: 1.35; flex: 1;
   letter-spacing: -0.01em;
 }
 
-.score-badge { font-size: 17px; font-weight: 800; min-width: 50px; text-align: right; flex-shrink: 0; letter-spacing: -0.02em; }
+.score-badge { font-size: 17px; font-weight: 800; min-width: 46px; text-align: right; flex-shrink: 0; letter-spacing: -0.02em; }
 .score-badge.teal  { color: var(--teal);  }
 .score-badge.amber { color: var(--amber); }
 .score-badge.coral { color: var(--coral); }
 .score-badge.gray  { color: var(--gray);  }
 
 .score-bar-wrap {
-  height: 5px; background: var(--gray-bg);
+  height: 4px; background: var(--gray-bg);
   border-radius: 3px; overflow: hidden;
 }
 .score-bar {
-  height: 5px; border-radius: 3px;
+  height: 4px; border-radius: 3px;
   animation: barGrow 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 .score-bar.teal  { background: linear-gradient(90deg, var(--teal), #26c98e); }
@@ -345,9 +352,18 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .score-bar.coral { background: linear-gradient(90deg, var(--coral), #f07040); }
 .score-bar.gray  { background: var(--gray); }
 
-.card-meta { font-size: 11.5px; color: var(--text-muted); line-height: 1.8; }
-.card-meta strong { color: var(--text); font-weight: 700; }
+/* Primary meta line: Company · Location */
+.card-meta { font-size: 12.5px; color: var(--text); line-height: 1.4; }
+.card-meta strong { font-weight: 700; }
 
+/* Secondary meta lines */
+.card-meta-sub {
+  font-size: 11px; color: var(--text-muted); line-height: 1.4;
+}
+.card-meta-sub.muted { font-size: 10.5px; }
+.card-meta-sub .salary { color: var(--navy); font-weight: 700; }
+
+/* Tag rows */
 .tag-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .tag {
   font-size: 10.5px; padding: 2px 8px;
@@ -358,11 +374,43 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .tag.match { background: var(--teal-bg);  color: var(--teal-text);  }
 .tag.gap   { background: var(--coral-bg); color: var(--coral-text); }
 
+/* "+N more" button inline with tags */
+.btn-more-tags {
+  font-size: 10.5px; padding: 2px 8px;
+  border-radius: var(--radius-xs); line-height: 1.5; font-weight: 600;
+  border: 1.5px dashed var(--border); background: none;
+  color: var(--text-muted); cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+.btn-more-tags:hover { border-color: var(--navy); color: var(--navy); }
+
+/* Collapsible AI analysis section */
+.card-analysis { display: flex; flex-direction: column; gap: 7px; padding-top: 4px; }
+.card-analysis.hidden { display: none; }
+
 .card-score-summary {
-  font-size: 11.5px; color: var(--text-muted); font-style: italic;
-  border-top: 1px solid var(--border-subtle); padding-top: 9px;
+  font-size: 11px; color: var(--text-muted); font-style: italic;
   line-height: 1.55;
 }
+
+/* Toggle button at the bottom of card body */
+.btn-toggle-analysis {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); padding: 0;
+  text-align: left; transition: color var(--transition);
+}
+.btn-toggle-analysis:hover  { color: var(--navy); }
+.btn-toggle-analysis.active { color: var(--navy); }
+
+/* ─── Pagination ────────────────────────────────────────────────── */
+.pagination {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 18px 22px;
+  border-top: 1px solid var(--border-subtle);
+}
+.pagination.hidden { display: none; }
+#page-info { font-size: 13px; font-weight: 600; color: var(--text-muted); min-width: 100px; text-align: center; }
 
 .card-actions {
   display: flex; flex-wrap: wrap; gap: 6px;

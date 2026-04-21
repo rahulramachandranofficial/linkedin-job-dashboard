@@ -30,13 +30,14 @@
         <input type="text" id="candidate-name" placeholder="e.g. Deepika Ravikumar">
       </label>
       <label>Upload Resume (PDF or TXT)
-        <div class="upload-area" id="resume-drop-zone">
-          <input type="file" id="resume-file" accept=".pdf,.txt" style="display:none">
+        <!-- label[for] triggers file picker natively on mobile without JS -->
+        <label class="upload-area" id="resume-drop-zone" for="resume-file">
+          <input type="file" id="resume-file" accept=".pdf,.txt" class="visually-hidden">
           <div class="upload-inner">
             <span class="upload-icon">⬆</span>
             <span id="resume-filename">Drop file here or click to browse</span>
           </div>
-        </div>
+        </label>
         <span class="hint">PDF or TXT — text is extracted automatically and replaces the profile text below</span>
       </label>
       <div id="resume-status" class="upload-status hidden"></div>
@@ -183,9 +184,15 @@
       <button class="btn-secondary" id="btn-retry">Retry</button>
     </div>
     <div id="results-grid" class="results-grid"></div>
+    <div id="pagination" class="pagination hidden">
+      <button class="btn-secondary" id="btn-prev-page">← Prev</button>
+      <span id="page-info">Page 1 of 1</span>
+      <button class="btn-secondary" id="btn-next-page">Next →</button>
+    </div>
   </main>
 </div>
 
+<script src="js/config.js"></script>
 <script src="js/resume.js"></script>
 <script src="js/scraper.js"></script>
 <script src="js/ai.js"></script>

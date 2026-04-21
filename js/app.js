@@ -133,8 +133,8 @@ async function handleResumeFile(file) {
   }
 }
 
-els.resumeDropZone.onclick  = () => els.resumeFile.click();
-els.resumeFile.onchange     = e => handleResumeFile(e.target.files[0]);
+/* No onclick needed — <label for="resume-file"> handles native file picker on all devices */
+els.resumeFile.onchange = e => handleResumeFile(e.target.files[0]);
 els.resumeDropZone.ondragover  = e => { e.preventDefault(); els.resumeDropZone.classList.add('drag-over'); };
 els.resumeDropZone.ondragleave = () => els.resumeDropZone.classList.remove('drag-over');
 els.resumeDropZone.ondrop = e => {
@@ -165,7 +165,10 @@ function setState(state) {
   els.loadingState.classList.toggle('hidden', state !== 'loading');
   els.emptyState.classList.toggle('hidden',   state !== 'empty');
   els.errorState.classList.toggle('hidden',   state !== 'error');
-  if (state !== 'results') els.resultsGrid.innerHTML = '';
+  if (state !== 'results') {
+    els.resultsGrid.innerHTML = '';
+    $('pagination').classList.add('hidden');
+  }
   if (state === 'loading') animateIn(els.loadingState);
   if (state === 'error')   animateIn(els.errorState);
 }
@@ -175,7 +178,22 @@ function scoreColor(s) {
 }
 
 function renderCard(job) {
-  const sc = scoreColor(job.score ?? 0);
+  const sc      = scoreColor(job.score ?? 0);
+  const matches = job.matches || [];
+  const gaps    = job.gaps    || [];
+
+  /* Show 2 match + 1 gap tags as preview; rest behind toggle */
+  const previewM = matches.slice(0, 2);
+  const previewG = gaps.slice(0, 1);
+  const extraCount = (matches.length + gaps.length) - (previewM.length + previewG.length);
+  const hasDetail  = job.summary || matches.length || gaps.length;
+
+  const previewTagsHtml = [
+    ...previewM.map(m => `<span class="tag match">${m}</span>`),
+    ...previewG.map(g => `<span class="tag gap">${g}</span>`),
+    extraCount > 0 ? `<button class="btn-more-tags">+${extraCount} more</button>` : '',
+  ].join('');
+
   const card = document.createElement('div');
   card.className = 'job-card';
   card.style.opacity = '0';
@@ -186,26 +204,46 @@ function renderCard(job) {
         <div class="card-title">${job.title}</div>
         <div class="score-badge ${sc}">${job.score != null ? job.score + '%' : '—'}</div>
       </div>
-      <div class="score-bar-wrap">
-        <div class="score-bar ${sc}" style="width:${job.score ?? 0}%"></div>
-      </div>
-      <div class="card-meta">
-        <strong>${job.company}</strong> · ${job.location}<br>
-        ${[job.type, job.seniority, job.workplace].filter(Boolean).join(' · ')}<br>
-        Posted ${job.posted} · ${job.applicants} applicants
-        ${job.salary ? ` · <strong>${job.salary}</strong>` : ''}
-      </div>
-      <div class="tag-row">
-        ${(job.matches||[]).map(m=>`<span class="tag match">${m}</span>`).join('')}
-        ${(job.gaps   ||[]).map(g=>`<span class="tag gap">${g}</span>`).join('')}
-      </div>
-      ${job.summary ? `<div class="card-score-summary">${job.summary}</div>` : ''}
+      <div class="score-bar-wrap"><div class="score-bar ${sc}" style="width:${job.score ?? 0}%"></div></div>
+      <div class="card-meta"><strong>${job.company}</strong> · ${job.location}</div>
+      <div class="card-meta-sub">${[job.type, job.seniority, job.workplace].filter(Boolean).join(' · ')}${job.salary ? ` · <span class="salary">${job.salary}</span>` : ''}</div>
+      <div class="card-meta-sub muted">Posted ${job.posted} · ${job.applicants} applicants</div>
+      ${previewTagsHtml ? `<div class="tag-row card-tags-preview">${previewTagsHtml}</div>` : ''}
+      ${hasDetail ? `
+        <div class="card-analysis hidden">
+          <div class="tag-row">
+            ${matches.map(m => `<span class="tag match">${m}</span>`).join('')}
+            ${gaps.map(g => `<span class="tag gap">${g}</span>`).join('')}
+          </div>
+          ${job.summary ? `<div class="card-score-summary">${job.summary}</div>` : ''}
+        </div>
+        <button class="btn-toggle-analysis">▾ AI analysis</button>` : ''}
     </div>
     <div class="card-actions">
-      <button class="btn-cover">✉ Draft cover letter</button>
+      <button class="btn-cover">✉ Cover letter</button>
       <a class="btn-apply" href="${job.applyUrl}" target="_blank" rel="noopener">Apply ↗</a>
       <a class="btn-apply" href="${job.link}"     target="_blank" rel="noopener">LinkedIn ↗</a>
     </div>`;
+
+  const toggleBtn  = card.querySelector('.btn-toggle-analysis');
+  const analysisEl = card.querySelector('.card-analysis');
+  const moreBtn    = card.querySelector('.btn-more-tags');
+
+  if (toggleBtn && analysisEl) {
+    toggleBtn.onclick = () => {
+      const nowHidden = analysisEl.classList.toggle('hidden');
+      toggleBtn.textContent = nowHidden ? '▾ AI analysis' : '▴ Hide analysis';
+      toggleBtn.classList.toggle('active', !nowHidden);
+    };
+  }
+  if (moreBtn && toggleBtn) {
+    moreBtn.onclick = () => {
+      analysisEl.classList.remove('hidden');
+      toggleBtn.textContent = '▴ Hide analysis';
+      toggleBtn.classList.add('active');
+    };
+  }
+
   card.querySelector('.btn-cover').onclick = () => openCoverLetter(job);
   return card;
 }
@@ -217,14 +255,34 @@ function sortJobs(jobs, sort) {
   return a;
 }
 
-function renderResults(jobs, cfg) {
-  els.resultsGrid.innerHTML = '';
-  const sorted = sortJobs(jobs, cfg.sort);
-  const cards  = sorted.map(j => renderCard(j));
-  cards.forEach(c => els.resultsGrid.appendChild(c));
+/* ── Pagination ── */
+const PAGE_SIZE = 8;
+let currentPage = 1;
+let pagedJobs   = [];
 
-  /* Staggered entrance via Motion One */
+function renderPage(page) {
+  currentPage = page;
+  els.resultsGrid.innerHTML = '';
+  const start = (page - 1) * PAGE_SIZE;
+  const cards = pagedJobs.slice(start, start + PAGE_SIZE).map(j => renderCard(j));
+  cards.forEach(c => els.resultsGrid.appendChild(c));
   animateCards(cards);
+
+  const pages   = Math.ceil(pagedJobs.length / PAGE_SIZE);
+  const pag     = $('pagination');
+  pag.classList.toggle('hidden', pages <= 1);
+  $('page-info').textContent  = `Page ${currentPage} of ${pages}`;
+  $('btn-prev-page').disabled = currentPage <= 1;
+  $('btn-next-page').disabled = currentPage >= pages;
+
+  /* Scroll results area back to top on page change */
+  document.querySelector('.main-content').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderResults(jobs, cfg) {
+  pagedJobs   = sortJobs(jobs, cfg.sort);
+  currentPage = 1;
+  renderPage(1);
 
   const high = jobs.filter(j=>(j.score??0)>=70).length;
   const mid  = jobs.filter(j=>(j.score??0)>=50&&(j.score??0)<70).length;
@@ -272,6 +330,8 @@ async function runSearch(cfg) {
 els.searchForm.onsubmit = e => { e.preventDefault(); runSearch(getConfig()); };
 els.btnRefresh.onclick  = () => { if (lastCfg) runSearch(lastCfg); };
 $('btn-retry').onclick  = () => { if (lastCfg) runSearch(lastCfg); };
+$('btn-prev-page').onclick = () => renderPage(currentPage - 1);
+$('btn-next-page').onclick = () => renderPage(currentPage + 1);
 els.btnExportPdf.onclick = () => {
   if (lastJobs.length) window.PDF.exportReport(lastJobs, lastCfg).catch(e => alert(`Export error: ${e.message}`));
 };
@@ -357,5 +417,13 @@ document.addEventListener('keydown', e => {
   if (!els.settingsOverlay.classList.contains('hidden')) els.settingsOverlay.classList.add('hidden');
   if (!els.letterOverlay.classList.contains('hidden'))  els.letterOverlay.classList.add('hidden');
 });
+
+/* Seed localStorage from config.js defaults (only when key is not already set) */
+(function seedFromConfig() {
+  const cfg = window.APP_CONFIG || {};
+  if (cfg.apifyKey     && !localStorage.getItem('apify_key'))         localStorage.setItem('apify_key',         cfg.apifyKey);
+  if (cfg.anthropicKey && !localStorage.getItem('anthropic_key'))     localStorage.setItem('anthropic_key',     cfg.anthropicKey);
+  if (cfg.candidateName && !localStorage.getItem('candidate_name'))   localStorage.setItem('candidate_name',    cfg.candidateName);
+})();
 
 setState('empty');
