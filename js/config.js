@@ -8,5 +8,4 @@
 window.APP_CONFIG = {
   apifyKey:     '',   // your Apify API key
   anthropicKey: '',   // your Anthropic API key
-  candidateName: '',  // optional: your name for cover letters
 };

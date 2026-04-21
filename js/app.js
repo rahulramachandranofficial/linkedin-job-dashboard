@@ -421,9 +421,8 @@ document.addEventListener('keydown', e => {
 /* Seed localStorage from config.js defaults (only when key is not already set) */
 (function seedFromConfig() {
   const cfg = window.APP_CONFIG || {};
-  if (cfg.apifyKey     && !localStorage.getItem('apify_key'))         localStorage.setItem('apify_key',         cfg.apifyKey);
-  if (cfg.anthropicKey && !localStorage.getItem('anthropic_key'))     localStorage.setItem('anthropic_key',     cfg.anthropicKey);
-  if (cfg.candidateName && !localStorage.getItem('candidate_name'))   localStorage.setItem('candidate_name',    cfg.candidateName);
+  if (cfg.apifyKey     && !localStorage.getItem('apify_key'))     localStorage.setItem('apify_key',     cfg.apifyKey);
+  if (cfg.anthropicKey && !localStorage.getItem('anthropic_key')) localStorage.setItem('anthropic_key', cfg.anthropicKey);
 })();
 
 setState('empty');
