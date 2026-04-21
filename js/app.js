@@ -1,0 +1,309 @@
+/* Motion One helper — animate with Framer Motion web animations */
+const mot = window.Motion || {};
+const animate = mot.animate || (() => {});
+const stagger  = mot.stagger  || (delay => (_, i) => i * delay);
+
+const LS = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+};
+
+function getKeys() {
+  return {
+    apify:     localStorage.getItem('apify_key')          || '',
+    anthropic: localStorage.getItem('anthropic_key')      || '',
+    name:      localStorage.getItem('candidate_name')     || '',
+    profile:   localStorage.getItem('candidate_profile')  || '',
+  };
+}
+
+let lastJobs = [], lastCfg = null, currentJob = null;
+
+const $ = id => document.getElementById(id);
+
+const els = {
+  searchForm:      $('search-form'),
+  btnRefresh:      $('btn-refresh'),
+  btnExportPdf:    $('btn-export-pdf'),
+  btnSettings:     $('btn-settings'),
+  settingsOverlay: $('settings-overlay'),
+  settingsModal:   $('settings-modal'),
+  closeSettings:   $('close-settings'),
+  saveSettings:    $('save-settings'),
+  letterOverlay:   $('letter-overlay'),
+  letterModal:     $('letter-modal'),
+  closeLetter:     $('close-letter'),
+  letterBody:      $('letter-body'),
+  letterLoading:   $('letter-loading'),
+  letterTone:      $('letter-tone'),
+  regenBtn:        $('regenerate-letter'),
+  copyBtn:         $('copy-letter'),
+  exportLetterPdf: $('export-letter-pdf'),
+  resultsGrid:     $('results-grid'),
+  loadingState:    $('loading-state'),
+  loadingMsg:      $('loading-msg'),
+  emptyState:      $('empty-state'),
+  errorState:      $('error-state'),
+  errorMsg:        $('error-msg'),
+  resultSummary:   $('result-summary'),
+  resumeDropZone:  $('resume-drop-zone'),
+  resumeFile:      $('resume-file'),
+  resumeFilename:  $('resume-filename'),
+  resumeStatus:    $('resume-status'),
+  letterTitle:     $('letter-modal-title'),
+};
+
+/* ── Motion helpers ── */
+function animateIn(el, opts = {}) {
+  if (!el || !animate) return;
+  animate(el, { opacity: [0, 1], y: [12, 0] }, { duration: 0.25, easing: [0.4, 0, 0.2, 1], ...opts });
+}
+
+function animateModal(el) {
+  if (!el || !animate) return;
+  animate(el, { opacity: [0, 1], scale: [0.94, 1], y: [16, 0] }, { duration: 0.28, easing: [0.34, 1.56, 0.64, 1] });
+}
+
+function animateCards(cards) {
+  if (!cards.length || !animate) return;
+  animate(cards, { opacity: [0, 1], y: [20, 0], scale: [0.97, 1] }, {
+    duration: 0.3,
+    delay: stagger(0.04),
+    easing: [0.34, 1.56, 0.64, 1],
+  });
+}
+
+/* ── SETTINGS ── */
+els.btnSettings.onclick = () => {
+  const k = getKeys();
+  $('apify-key').value         = localStorage.getItem('apify_key')     || '';
+  $('anthropic-key').value     = localStorage.getItem('anthropic_key') || '';
+  $('candidate-name').value    = k.name;
+  $('candidate-profile').value = k.profile;
+  els.resumeFilename.textContent = 'Drop file here or click to browse';
+  els.resumeStatus.className   = 'upload-status hidden';
+  els.settingsOverlay.classList.remove('hidden');
+  animateModal(els.settingsModal);
+};
+els.closeSettings.onclick   = () => els.settingsOverlay.classList.add('hidden');
+els.settingsOverlay.onclick = e => { if (e.target === els.settingsOverlay) els.settingsOverlay.classList.add('hidden'); };
+
+els.saveSettings.onclick = () => {
+  localStorage.setItem('apify_key',         $('apify-key').value.trim());
+  localStorage.setItem('anthropic_key',     $('anthropic-key').value.trim());
+  localStorage.setItem('candidate_name',    $('candidate-name').value.trim());
+  localStorage.setItem('candidate_profile', $('candidate-profile').value.trim());
+  els.settingsOverlay.classList.add('hidden');
+};
+
+/* ── RESUME UPLOAD ── */
+async function handleResumeFile(file) {
+  if (!file) return;
+  els.resumeStatus.className   = 'upload-status';
+  els.resumeStatus.textContent = `Extracting text from ${file.name}…`;
+  animateIn(els.resumeStatus);
+  els.resumeFilename.textContent = file.name;
+  try {
+    const text = await window.Resume.extract(file);
+    if (!text || text.length < 50) throw new Error('Could not extract enough text. Try a TXT version.');
+    $('candidate-profile').value = text;
+    els.resumeStatus.textContent = `Done — ${text.length.toLocaleString()} characters extracted from ${file.name}`;
+  } catch (err) {
+    els.resumeStatus.className   = 'upload-status error';
+    els.resumeStatus.textContent = `Error: ${err.message}`;
+  }
+}
+
+els.resumeDropZone.onclick  = () => els.resumeFile.click();
+els.resumeFile.onchange     = e => handleResumeFile(e.target.files[0]);
+els.resumeDropZone.ondragover  = e => { e.preventDefault(); els.resumeDropZone.classList.add('drag-over'); };
+els.resumeDropZone.ondragleave = () => els.resumeDropZone.classList.remove('drag-over');
+els.resumeDropZone.ondrop = e => {
+  e.preventDefault();
+  els.resumeDropZone.classList.remove('drag-over');
+  handleResumeFile(e.dataTransfer.files[0]);
+};
+
+/* ── SEARCH ── */
+function getConfig() {
+  const wt     = $('f-type').value;
+  const posted = $('f-posted').value;
+  return {
+    role:       $('f-role').value.trim(),
+    location:   $('f-location').value.trim(),
+    keywords:   $('f-keywords').value.trim(),
+    workType:   wt,
+    timePosted: posted,
+    count:      $('f-count').value,
+    sort:       $('f-sort').value,
+    workTypeLabel: { '':'Any','2':'Remote','3':'Hybrid','1':'On-site' }[wt] || 'Any',
+    postedLabel:   { 'r86400':'Past 24 hrs','r604800':'Past week','r2592000':'Past month' }[posted] || '',
+    sortLabel:     $('f-sort').options[$('f-sort').selectedIndex].text,
+  };
+}
+
+function setState(state) {
+  els.loadingState.classList.toggle('hidden', state !== 'loading');
+  els.emptyState.classList.toggle('hidden',   state !== 'empty');
+  els.errorState.classList.toggle('hidden',   state !== 'error');
+  if (state !== 'results') els.resultsGrid.innerHTML = '';
+  if (state === 'loading') animateIn(els.loadingState);
+  if (state === 'error')   animateIn(els.errorState);
+}
+
+function scoreColor(s) {
+  return s >= 70 ? 'teal' : s >= 50 ? 'amber' : s >= 25 ? 'coral' : 'gray';
+}
+
+function renderCard(job) {
+  const sc = scoreColor(job.score ?? 0);
+  const card = document.createElement('div');
+  card.className = 'job-card';
+  card.style.opacity = '0';
+  card.innerHTML = `
+    <div class="card-accent ${sc}"></div>
+    <div class="card-body">
+      <div class="card-top">
+        <div class="card-title">${job.title}</div>
+        <div class="score-badge ${sc}">${job.score != null ? job.score + '%' : '—'}</div>
+      </div>
+      <div class="score-bar-wrap">
+        <div class="score-bar ${sc}" style="width:${job.score ?? 0}%"></div>
+      </div>
+      <div class="card-meta">
+        <strong>${job.company}</strong> · ${job.location}<br>
+        ${[job.type, job.seniority, job.workplace].filter(Boolean).join(' · ')}<br>
+        Posted ${job.posted} · ${job.applicants} applicants
+        ${job.salary ? ` · <strong>${job.salary}</strong>` : ''}
+      </div>
+      <div class="tag-row">
+        ${(job.matches||[]).map(m=>`<span class="tag match">${m}</span>`).join('')}
+        ${(job.gaps   ||[]).map(g=>`<span class="tag gap">${g}</span>`).join('')}
+      </div>
+      ${job.summary ? `<div class="card-score-summary">${job.summary}</div>` : ''}
+    </div>
+    <div class="card-actions">
+      <button class="btn-cover">✉ Draft cover letter</button>
+      <a class="btn-apply" href="${job.applyUrl}" target="_blank" rel="noopener">Apply ↗</a>
+      <a class="btn-apply" href="${job.link}"     target="_blank" rel="noopener">LinkedIn ↗</a>
+    </div>`;
+  card.querySelector('.btn-cover').onclick = () => openCoverLetter(job);
+  return card;
+}
+
+function sortJobs(jobs, sort) {
+  const a = [...jobs];
+  if (sort === 'fit')        return a.sort((x,y)=>(y.score??0)-(x.score??0));
+  if (sort === 'applicants') return a.sort((x,y)=>Number(x.applicants||999)-Number(y.applicants||999));
+  return a;
+}
+
+function renderResults(jobs, cfg) {
+  els.resultsGrid.innerHTML = '';
+  const sorted = sortJobs(jobs, cfg.sort);
+  const cards  = sorted.map(j => renderCard(j));
+  cards.forEach(c => els.resultsGrid.appendChild(c));
+
+  /* Staggered entrance via Motion One */
+  animateCards(cards);
+
+  const high = jobs.filter(j=>(j.score??0)>=70).length;
+  const mid  = jobs.filter(j=>(j.score??0)>=50&&(j.score??0)<70).length;
+  els.resultSummary.textContent = `${jobs.length} results · ${high} strong · ${mid} moderate · ${cfg.sortLabel}`;
+  animateIn(els.resultSummary);
+  els.btnRefresh.disabled   = false;
+  els.btnExportPdf.disabled = false;
+}
+
+async function runSearch(cfg) {
+  const keys = getKeys();
+  if (!keys.apify) {
+    setState('error');
+    els.errorMsg.textContent = 'Apify API key not set. Click ⚙ Settings to add it.';
+    return;
+  }
+  setState('loading');
+  els.loadingMsg.textContent = 'Starting Apify LinkedIn scrape…';
+
+  try {
+    const jobs = await window.Scraper.run(cfg, keys.apify, msg => { els.loadingMsg.textContent = msg; });
+
+    if (keys.anthropic && keys.profile) {
+      for (let i = 0; i < jobs.length; i++) {
+        els.loadingMsg.textContent = `Scoring job ${i+1}/${jobs.length} with Claude…`;
+        try {
+          const r = await window.AI.scoreJob(jobs[i], keys.profile, keys.anthropic);
+          jobs[i].score   = r.score;
+          jobs[i].matches = r.matches || [];
+          jobs[i].gaps    = r.gaps    || [];
+          jobs[i].summary = r.summary || '';
+        } catch { jobs[i].score = 50; jobs[i].summary = 'AI scoring unavailable'; }
+      }
+    }
+
+    lastJobs = jobs; lastCfg = cfg;
+    setState('results');
+    renderResults(jobs, cfg);
+  } catch (err) {
+    setState('error');
+    els.errorMsg.textContent = `Error: ${err.message}`;
+  }
+}
+
+els.searchForm.onsubmit = e => { e.preventDefault(); runSearch(getConfig()); };
+els.btnRefresh.onclick  = () => { if (lastCfg) runSearch(lastCfg); };
+$('btn-retry').onclick  = () => { if (lastCfg) runSearch(lastCfg); };
+els.btnExportPdf.onclick = () => { if (lastJobs.length) window.PDF.exportReport(lastJobs, lastCfg); };
+
+/* ── COVER LETTER ── */
+function openCoverLetter(job) {
+  currentJob = job;
+  els.letterTitle.textContent = `Draft cover letter — ${job.title} @ ${job.company}`;
+  els.letterBody.value = '';
+  els.letterOverlay.classList.remove('hidden');
+  animateModal(els.letterModal);
+  doGenerateLetter();
+}
+
+async function doGenerateLetter() {
+  const keys = getKeys();
+  if (!keys.anthropic) { els.letterBody.value = 'Anthropic API key not set. Go to ⚙ Settings.'; return; }
+  els.letterLoading.classList.remove('hidden');
+  els.letterBody.style.display = 'none';
+  try {
+    const text = await window.AI.generateCoverLetter(
+      currentJob, keys.profile, keys.name, els.letterTone.value, keys.anthropic
+    );
+    els.letterBody.value = text;
+    animateIn(els.letterBody);
+  } catch (err) {
+    els.letterBody.value = `Error: ${err.message}`;
+  } finally {
+    els.letterLoading.classList.add('hidden');
+    els.letterBody.style.display = '';
+  }
+}
+
+els.closeLetter.onclick   = () => els.letterOverlay.classList.add('hidden');
+els.letterOverlay.onclick = e => { if (e.target === els.letterOverlay) els.letterOverlay.classList.add('hidden'); };
+els.regenBtn.onclick      = doGenerateLetter;
+els.letterTone.onchange   = doGenerateLetter;
+els.copyBtn.onclick = () => {
+  navigator.clipboard.writeText(els.letterBody.value).then(() => {
+    els.copyBtn.textContent = 'Copied!';
+    if (animate) animate(els.copyBtn, { scale: [1, 1.12, 1] }, { duration: 0.3 });
+    setTimeout(() => els.copyBtn.textContent = 'Copy text', 1500);
+  });
+};
+els.exportLetterPdf.onclick = () => {
+  if (currentJob && els.letterBody.value)
+    window.PDF.exportLetter(els.letterBody.value, currentJob.title, currentJob.company);
+};
+
+/* ── Search button ripple effect ── */
+els.searchForm.addEventListener('submit', () => {
+  const btn = document.getElementById('btn-search');
+  if (animate) animate(btn, { scale: [1, 0.96, 1] }, { duration: 0.18 });
+});
+
+setState('empty');

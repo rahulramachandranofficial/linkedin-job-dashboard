@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkedIn Job Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+<!-- Motion One — Framer Motion web animations (no React required) -->
+<script src="https://cdn.jsdelivr.net/npm/motion@10.18.0/dist/motion.js"></script>
+</head>
+<body>
+
+<!-- SETTINGS MODAL -->
+<div id="settings-overlay" class="overlay hidden">
+  <div class="modal" id="settings-modal">
+    <div class="modal-header">
+      <h2>Settings</h2>
+      <button class="btn-icon" id="close-settings">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>Apify API Key
+        <input type="password" id="apify-key" placeholder="apify_api_xxxx…" autocomplete="off">
+        <span class="hint">Get from <a href="https://console.apify.com/account/integrations" target="_blank">console.apify.com</a></span>
+      </label>
+      <label>Anthropic API Key
+        <input type="password" id="anthropic-key" placeholder="sk-ant-xxxx…" autocomplete="off">
+        <span class="hint">Get from <a href="https://console.anthropic.com/settings/api-keys" target="_blank">console.anthropic.com</a></span>
+      </label>
+      <label>Your Name
+        <input type="text" id="candidate-name" placeholder="e.g. Deepika Ravikumar">
+      </label>
+      <label>Upload Resume (PDF or TXT)
+        <div class="upload-area" id="resume-drop-zone">
+          <input type="file" id="resume-file" accept=".pdf,.txt" style="display:none">
+          <div class="upload-inner">
+            <span class="upload-icon">⬆</span>
+            <span id="resume-filename">Drop file here or click to browse</span>
+          </div>
+        </div>
+        <span class="hint">PDF or TXT — text is extracted automatically and replaces the profile text below</span>
+      </label>
+      <div id="resume-status" class="upload-status hidden"></div>
+      <label>Profile / Resume Text
+        <textarea id="candidate-profile" rows="7" placeholder="Paste your professional summary here, or upload a resume above to auto-fill…"></textarea>
+      </label>
+      <button class="btn-primary" id="save-settings">Save settings</button>
+      <p class="hint" style="margin-top:8px">Keys are stored only in your browser (localStorage). Never sent anywhere except the respective API.</p>
+    </div>
+  </div>
+</div>
+
+<!-- COVER LETTER MODAL -->
+<div id="letter-overlay" class="overlay hidden">
+  <div class="modal modal-wide" id="letter-modal">
+    <div class="modal-header">
+      <h2 id="letter-modal-title">Draft cover letter</h2>
+      <button class="btn-icon" id="close-letter">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="letter-controls">
+        <label style="flex:0 0 auto">Tone
+          <select id="letter-tone">
+            <option value="professional">Professional</option>
+            <option value="friendly">Friendly &amp; warm</option>
+            <option value="concise">Concise &amp; direct</option>
+            <option value="executive">Executive-level</option>
+          </select>
+        </label>
+        <button class="btn-secondary" id="regenerate-letter">↺ Regenerate</button>
+        <button class="btn-secondary" id="copy-letter">Copy text</button>
+        <button class="btn-secondary" id="export-letter-pdf">Export PDF</button>
+      </div>
+      <div id="letter-loading" class="spinner-wrap hidden">
+        <div class="spinner"></div><span>Generating with Claude…</span>
+      </div>
+      <textarea id="letter-body" rows="22" placeholder="Cover letter will appear here…"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">JD</div>
+      <div>
+        <div class="brand-name">Job Dashboard</div>
+        <div class="brand-sub">LinkedIn · Powered by AI</div>
+      </div>
+    </div>
+
+    <form id="search-form" autocomplete="off">
+      <div class="form-section">Search criteria</div>
+      <label>Job role / title
+        <input type="text" id="f-role" placeholder="e.g. Business Analyst" required>
+      </label>
+      <label>Location
+        <input type="text" id="f-location" placeholder="e.g. Europe, United Kingdom">
+      </label>
+      <label>Extra keywords
+        <input type="text" id="f-keywords" placeholder="e.g. SQL regulatory banking">
+      </label>
+      <label>Job type
+        <select id="f-type">
+          <option value="">Any</option>
+          <option value="2">Remote</option>
+          <option value="3">Hybrid</option>
+          <option value="1">On-site</option>
+        </select>
+      </label>
+      <label>Posted within
+        <select id="f-posted">
+          <option value="r86400">Past 24 hours</option>
+          <option value="r604800" selected>Past week</option>
+          <option value="r2592000">Past month</option>
+        </select>
+      </label>
+      <label>Results to fetch
+        <select id="f-count">
+          <option value="10">10</option>
+          <option value="25" selected>25</option>
+          <option value="50">50</option>
+        </select>
+      </label>
+      <label>Sort by
+        <select id="f-sort">
+          <option value="fit">AI fit score</option>
+          <option value="date">Date posted</option>
+          <option value="applicants">Fewest applicants</option>
+        </select>
+      </label>
+      <button type="submit" class="btn-primary btn-full" id="btn-search">Search LinkedIn</button>
+      <button type="button" class="btn-secondary btn-full" id="btn-refresh" disabled>↺ Refresh results</button>
+    </form>
+
+    <div class="sidebar-footer">
+      <button class="btn-icon-label" id="btn-settings">⚙ Settings</button>
+      <button class="btn-icon-label" id="btn-export-pdf" disabled>⬇ Export PDF</button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="topbar">
+      <div id="result-summary" class="result-summary"></div>
+      <div class="legend">
+        <span class="dot teal"></span>Strong ≥70%
+        <span class="dot amber"></span>Moderate 50–69%
+        <span class="dot coral"></span>Partial 25–49%
+        <span class="dot gray"></span>Low &lt;25%
+      </div>
+    </div>
+    <div id="loading-state" class="loading-state hidden">
+      <div class="pulse-ring"></div>
+      <div class="spinner large"></div>
+      <p id="loading-msg">Scraping LinkedIn via Apify…</p>
+      <p class="hint">This usually takes 30–60 seconds</p>
+    </div>
+    <div id="empty-state" class="empty-state">
+      <div class="empty-icon">⌕</div>
+      <h3>Run your first search</h3>
+      <p>Enter a job role and location, add your API keys in Settings, then click Search LinkedIn.</p>
+    </div>
+    <div id="error-state" class="error-state hidden">
+      <p id="error-msg"></p>
+      <button class="btn-secondary" id="btn-retry">Retry</button>
+    </div>
+    <div id="results-grid" class="results-grid"></div>
+  </main>
+</div>
+
+<script src="js/resume.js"></script>
+<script src="js/scraper.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/pdf.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
