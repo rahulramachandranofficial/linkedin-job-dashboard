@@ -275,12 +275,13 @@ async function doGenerateLetter() {
       currentJob, keys.profile, keys.name, els.letterTone.value, keys.anthropic
     );
     els.letterBody.value = text;
-    animateIn(els.letterBody);
   } catch (err) {
     els.letterBody.value = `Error: ${err.message}`;
   } finally {
     els.letterLoading.classList.add('hidden');
     els.letterBody.style.display = '';
+    /* animate AFTER display is restored so Motion One can measure the element */
+    animateIn(els.letterBody);
   }
 }
 
@@ -300,10 +301,17 @@ els.exportLetterPdf.onclick = () => {
     window.PDF.exportLetter(els.letterBody.value, currentJob.title, currentJob.company);
 };
 
-/* ── Search button ripple effect ── */
+/* ── Search button press feedback ── */
 els.searchForm.addEventListener('submit', () => {
   const btn = document.getElementById('btn-search');
   if (animate) animate(btn, { scale: [1, 0.96, 1] }, { duration: 0.18 });
+});
+
+/* ── Escape key closes any open modal ── */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!els.settingsOverlay.classList.contains('hidden')) els.settingsOverlay.classList.add('hidden');
+  if (!els.letterOverlay.classList.contains('hidden'))  els.letterOverlay.classList.add('hidden');
 });
 
 setState('empty');
