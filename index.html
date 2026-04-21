@@ -80,6 +80,24 @@
 
 <!-- MAIN APP -->
 <div class="app-shell">
+
+  <!-- Mobile-only sticky header with hamburger -->
+  <div class="mobile-header">
+    <div class="brand">
+      <div class="brand-icon">JD</div>
+      <div>
+        <div class="brand-name">Job Dashboard</div>
+        <div class="brand-sub">LinkedIn · Powered by AI</div>
+      </div>
+    </div>
+    <button class="btn-hamburger" id="btn-mobile-menu" aria-label="Toggle search panel">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <!-- Overlay that dims main content when sidebar is open on mobile -->
+  <div class="sidebar-dim" id="sidebar-dim"></div>
+
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-icon">JD</div>

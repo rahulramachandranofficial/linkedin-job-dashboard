@@ -305,7 +305,30 @@ els.exportLetterPdf.onclick = () => {
 els.searchForm.addEventListener('submit', () => {
   const btn = document.getElementById('btn-search');
   if (animate) animate(btn, { scale: [1, 0.96, 1] }, { duration: 0.18 });
+  /* Auto-close drawer on mobile after search starts */
+  closeMobileSidebar();
 });
+
+/* ── Mobile sidebar drawer ── */
+const mobileMenuBtn = $('btn-mobile-menu');
+const sidebarDim    = $('sidebar-dim');
+const sidebarEl     = document.querySelector('.sidebar');
+
+function closeMobileSidebar() {
+  if (!sidebarEl) return;
+  sidebarEl.classList.remove('mobile-open');
+  sidebarDim.classList.remove('active');
+  if (mobileMenuBtn) mobileMenuBtn.classList.remove('open');
+}
+
+if (mobileMenuBtn) {
+  mobileMenuBtn.addEventListener('click', () => {
+    const isOpen = sidebarEl.classList.toggle('mobile-open');
+    sidebarDim.classList.toggle('active', isOpen);
+    mobileMenuBtn.classList.toggle('open', isOpen);
+  });
+  sidebarDim.addEventListener('click', closeMobileSidebar);
+}
 
 /* ── Escape key closes any open modal ── */
 document.addEventListener('keydown', e => {
