@@ -50,11 +50,11 @@ window.PDF = {
     const PW = 210, ML = 14, MR = 14, CW = PW - ML - MR;
     let y = 14;
 
-    doc.setFontSize(18).setFont(undefined, 'bold').setTextColor(12, 68, 124);
+    doc.setFontSize(18).setFont('helvetica', 'bold').setTextColor(12, 68, 124);
     doc.text('LinkedIn Job Search Report', ML, y);
     y += 7;
 
-    doc.setFontSize(9).setFont(undefined, 'normal').setTextColor(100, 100, 100);
+    doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(100, 100, 100);
     doc.text(`Generated ${new Date().toLocaleString('en-GB')}`, ML, y);
     y += 5;
     doc.text(
@@ -100,18 +100,18 @@ window.PDF = {
       doc.line(ML, y, ML, y + needH - 4);
 
       const titleX = ML + 4;
-      doc.setFontSize(11).setFont(undefined, 'bold').setTextColor(12, 68, 124);
+      doc.setFontSize(11).setFont('helvetica', 'bold').setTextColor(12, 68, 124);
       doc.text(`#${idx+1} ${job.title}`, titleX, y + 4, { maxWidth: CW - 28 });
 
-      doc.setFontSize(14).setFont(undefined, 'bold').setTextColor(...rgb);
+      doc.setFontSize(14).setFont('helvetica', 'bold').setTextColor(...rgb);
       doc.text(`${job.score??'?'}%`, PW - MR, y + 4, { align: 'right' });
 
-      doc.setFontSize(8).setFont(undefined, 'normal').setTextColor(...rgb);
+      doc.setFontSize(8).setFont('helvetica', 'normal').setTextColor(...rgb);
       doc.text(sc.label, PW - MR, y + 9, { align: 'right' });
 
       y += 12;
 
-      doc.setFontSize(8).setFont(undefined, 'normal').setTextColor(80, 80, 80);
+      doc.setFontSize(8).setFont('helvetica', 'normal').setTextColor(80, 80, 80);
       const metaParts = [job.company, job.location, job.type, job.seniority, job.posted ? `Posted ${job.posted}` : '', job.applicants ? `${job.applicants} applicants` : '', job.salary].filter(Boolean);
       doc.text(metaParts.join(' · '), titleX, y, { maxWidth: CW - 4 });
       y += 6;
@@ -137,7 +137,7 @@ window.PDF = {
       if (allTags.length) y += 6;
 
       if (job.summary) {
-        doc.setFontSize(8).setFont(undefined,'italic').setTextColor(100,100,100);
+        doc.setFontSize(8).setFont('helvetica','italic').setTextColor(100,100,100);
         doc.text(job.summary, titleX, y, { maxWidth: CW - 4 });
         y += 5;
       }
